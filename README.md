@@ -32,14 +32,14 @@ You can run the Buganizer Triage Workbench locally either using Docker.
 
 ## Section 1: Incident Report
 
-We have received an two external security reports that you have to triage.
+We have received two external security reports that you have to triage.
 
 Please review the details in [Issue 1](http://127.0.0.1:8081/1) and
 [Issue 2](http://127.0.0.1:8081/2) to understand and analyze the findings.
 
 You are being evaluated on your english writing, on your capabilities of 
-understanding the rules and asking and researching for any other meaningful
-    information that you need.
+understanding the rules, and asking and researching for any other meaningful
+information that you need.
 
 --------------------------------------------------------------------------------
 
