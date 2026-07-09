@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Issue Tracker - Bug {{ bug_id }}</title>
+    <link rel="stylesheet" href="/static/buganizer.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <!-- Top Header -->
+    <div class="tracker-header">
+        <div class="header-left">
+            <button class="menu-btn"><i class="material-icons">menu</i></button>
+            <div class="logo">
+                <span class="google-text">Google</span>
+                <span class="tracker-text">Issue Tracker</span>
+            </div>
+        </div>
+        <div class="search-bar">
+            <i class="material-icons search-icon">search</i>
+            <input type="text" placeholder="Search issues, hotlists, bookmarks..." disabled>
+        </div>
+        <div class="header-right">
+            <i class="material-icons">help_outline</i>
+            <i class="material-icons">notifications_none</i>
+            <div class="user-avatar">P</div>
+        </div>
+    </div>
+
+    <!-- Action Toolbar -->
+    <div class="action-toolbar">
+        <button class="action-btn primary"><i class="material-icons">edit</i> Edit</button>
+        <button class="action-btn" onclick="toggleCommentBox()"><i class="material-icons">comment</i> Comment</button>
+        <button class="action-btn"><i class="material-icons">person_add</i> Assign to me</button>
+        <button class="action-btn"><i class="material-icons">star_border</i></button>
+        <button class="action-btn"><i class="material-icons">refresh</i></button>
+        <div class="toolbar-separator"></div>
+        <span class="component-path">Component: <strong>{% block component_path %}Security &gt; Vulnerabilities{% endblock %}</strong></span>
+        {% block equiv_bug_button %}
+        {% endblock %}
+    </div>
+    
+    <!-- Main Container -->
+    <div class="tracker-container">
+        <!-- Left Content Area -->
+        <div class="main-content">
+            <!-- Hotlists Bar -->
+            <div class="hotlists-bar" style="margin-bottom: 16px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; background-color: #fff; padding: 8px 12px; border: 1px solid #dadce0; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); position: relative; overflow: visible;">
+                <div style="display: flex; align-items: center; gap: 4px; color: #5f6368; font-size: 13px; font-weight: 600; margin-right: 4px;">
+                    <i class="material-icons" style="font-size: 18px; color: #1a73e8;">bookmarks</i>
+                    <span>Hotlists:</span>
+                </div>
+                <div id="active-hotlists-container" style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <!-- Populated via JavaScript -->
+                </div>
+                
+                <!-- Add Hotlist Button & Menu Wrapper -->
+                <div style="position: relative; display: inline-block;">
+                    <button type="button" onclick="toggleHotlistMenu(event)" style="background: none; border: 1px dashed #dadce0; border-radius: 14px; padding: 2px 10px; color: #1a73e8; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500;" onmouseover="this.style.backgroundColor='#f8f9fa'; this.style.borderColor='#1a73e8'" onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='#dadce0'">
+                        <i class="material-icons" style="font-size: 14px;">add</i> Add Hotlist
+                    </button>
+                    
+                    <!-- Hotlists Popup Menu -->
+                    <div id="hotlist-menu" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 6px; width: 320px; background: #fff; border: 1px solid #dadce0; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); z-index: 1000; text-align: left;">
+                        <div style="padding: 10px; border-bottom: 1px solid #dadce0; background: #f8f9fa; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                            <input type="text" id="hotlist-search" placeholder="Search hotlists to add..." oninput="renderHotlistOptions()" onclick="event.stopPropagation()" style="width: 100%; padding: 8px 10px; border: 1px solid #1a73e8; border-radius: 4px; box-sizing: border-box; font-size: 13px; outline: none; font-family: Roboto, sans-serif; box-shadow: 0 0 0 2px rgba(26,115,232,0.2);">
+                        </div>
+                        <div id="hotlist-options-list" style="max-height: 200px; overflow-y: scroll; padding: 4px 0;">
+                            <!-- Hotlist options populated via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bug-header-card">
+                <div class="bug-id-row">
+                    <span class="bug-id-label">Issue {{ issue_num }}</span>
+                    <span class="bug-type-badge"><i class="material-icons">bug_report</i> VULNERABILITY</span>
+                </div>
+                <h1 class="bug-title">{% block bug_title %}Bug Title{% endblock %}</h1>
+            </div>
+
+            <!-- Description Card -->
+            <div class="bug-card description-card">
+                <div class="card-header">
+                    <div class="reporter-info">
+                        <div class="avatar">SD</div>
+                        <div class="reporter-details">
+                            <span class="reporter-name"><strong>{% block reporter_name %}SecDiscovery (external-reports@secdiscovery.example.com){% endblock %}</strong></span>
+                            <span class="report-date">reported on {% block report_date %}June 9, 2026{% endblock %}</span>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <i class="material-icons">reply</i>
+                        <i class="material-icons">more_vert</i>
+                    </div>
+                </div>
+                <div class="card-body description-content">
+                    {% block description_content %}{% endblock %}
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="comments-section">
+                {% block static_comments %}{% endblock %}
+
+                <!-- Dynamic Comments added via UI -->
+                {% for c in dynamic_comments %}
+                <div class="bug-card comment-card {% if c.is_internal %}internal-card{% endif %}" {% if c.is_internal %}style="background-color: #fefcf0; border-color: #fef3c7;"{% endif %}>
+                    <div class="card-header" {% if c.is_internal %}style="background-color: #fef3c7; border-bottom: 1px solid #fde68a;"{% endif %}>
+                        <div class="reporter-info">
+                            <div class="avatar" {% if c.is_internal %}style="background-color: #fde68a; color: #78350f;"{% endif %}>{{ c.avatar }}</div>
+                            <div class="reporter-details">
+                                <span class="reporter-name"><strong>{{ c.author }}</strong> {% if c.is_internal %}<span style="background-color: #fde68a; color: #78350f; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">INTERNAL ONLY</span>{% endif %}</span>
+                                <span class="report-date">commented on {{ c.date }}</span>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <i class="material-icons">reply</i>
+                            <i class="material-icons">more_vert</i>
+                        </div>
+                    </div>
+                    <div class="card-body description-content">
+                        {{ c.content | safe }}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Comment Input Box -->
+                <div id="comment-box-container" class="bug-card comment-card" style="display: none; margin-top: 16px; overflow: visible;">
+                    <div class="card-header">
+                        <span class="reporter-name"><strong>Add a Comment</strong></span>
+                    </div>
+                    <div class="card-body">
+                        <form id="comment-form" onsubmit="submitComment(event, {{ bug_id }})">
+                            <textarea id="comment-text" rows="4" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: Roboto, sans-serif;" placeholder="Write your comment here..."></textarea>
+                            <div style="margin-top: 8px; display: flex; justify-content: flex-end; gap: 8px; align-items: center;">
+                                <button type="button" class="action-btn" onclick="toggleCommentBox()">Cancel</button>
+                                <div style="position: relative; display: inline-block;">
+                                    <button type="button" class="action-btn" onclick="toggleCannedMenu(event)" style="display: inline-flex; align-items: center; gap: 4px;"><i class="material-icons" style="font-size: 16px;">playlist_add_check</i> Canned Responses <i class="material-icons" style="font-size: 16px;">arrow_drop_up</i></button>
+                                    
+                                    <!-- Canned Responses Popup Menu -->
+                                    <div id="canned-menu" style="display: none; position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 380px; background: #fff; border: 1px solid #dadce0; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); z-index: 1000; text-align: left;">
+                                        <div style="padding: 10px; border-bottom: 1px solid #dadce0; background: #f8f9fa; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                                            <input type="text" id="canned-search" placeholder="Filter canned responses..." oninput="filterCannedResponses()" onclick="event.stopPropagation()" style="width: 100%; padding: 8px 10px; border: 1px solid #1a73e8; border-radius: 4px; box-sizing: border-box; font-size: 13px; outline: none; font-family: Roboto, sans-serif; box-shadow: 0 0 0 2px rgba(26,115,232,0.2);">
+                                        </div>
+                                        <div id="canned-list" style="max-height: 180px; overflow-y: scroll; padding: 4px 0;">
+                                            <!-- Canned items populated via JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="action-btn primary" style="background-color: #1a73e8; color: white; border: none; padding: 6px 16px; border-radius: 4px; cursor: pointer;">Post Comment</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Sidebar -->
+        <div class="sidebar">
+            <!-- SPUR Decision Board Panel (Right Sidebar, Yellow Theme) -->
+            <div class="sidebar-section" style="background-color: #fefcf0; border: 1px solid #fde68a; border-left: 4px solid #d97706; border-radius: 6px; margin-bottom: 20px; padding: 0; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <div style="background-color: #fef3c7; padding: 10px 12px; border-bottom: 1px solid #fde68a; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="material-icons" style="color: #d97706; font-size: 18px;">assignment_turned_in</i>
+                        <span style="font-weight: 600; font-size: 13px; color: #78350f;">SPUR Decision Board</span>
+                    </div>
+                    <div>
+                        {% block decision_status %}
+                        <span style="background-color: #fde68a; color: #78350f; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: 600;">Pending Review</span>
+                        {% endblock %}
+                    </div>
+                </div>
+                <div style="padding: 12px; font-size: 12px; color: #451a03; line-height: 1.5;">
+                    {% block decision_content %}
+                    <div style="color: #78350f; font-style: italic;">
+                        No triage decisions or risk evaluations have been recorded for this issue yet.
+                    </div>
+                    {% endblock %}
+                </div>
+            </div>
+
+            <!-- Attributes Section -->
+            <div class="sidebar-section">
+                <div class="section-title">Attributes</div>
+                <table class="attributes-table">
+                    <tr>
+                        <td class="attr-label">Status</td>
+                        <td class="attr-value">
+                            <div class="select-mock status-active">
+                                {% block status_val %}Triaged{% endblock %} <i class="material-icons">arrow_drop_down</i>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="attr-label">Priority</td>
+                        <td class="attr-value">
+                            <div class="select-mock">
+                                {% block priority_val %}P1{% endblock %} <i class="material-icons">arrow_drop_down</i>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="attr-label">Severity</td>
+                        <td class="attr-value">
+                            <div class="select-mock">
+                                {% block severity_val %}S1{% endblock %} <i class="material-icons">arrow_drop_down</i>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="attr-label">Type</td>
+                        <td class="attr-value">{% block type_val %}CWE-79: Cross-site Scripting{% endblock %}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- People Section -->
+            <div class="sidebar-section">
+                <div class="section-title">People</div>
+                <table class="attributes-table">
+                    <tr>
+                        <td class="attr-label">Assignee</td>
+                        <td class="attr-value">
+                            <div class="select-mock assignee-unassigned">
+                                Unassigned <i class="material-icons">person_outline</i>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="attr-label">Reporter</td>
+                        <td class="attr-value">
+                            <span class="user-link">{% block reporter_link %}SecDiscovery{% endblock %}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="attr-label">Verifier</td>
+                        <td class="attr-value">
+                            <div class="select-mock">
+                                None <i class="material-icons">arrow_drop_down</i>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Dates Section -->
+            <div class="sidebar-section">
+                <div class="section-title">Dates</div>
+                <table class="attributes-table">
+                    <tr>
+                        <td class="attr-label">Created</td>
+                        <td class="attr-value">{% block created_date %}June 9, 2026{% endblock %}</td>
+                    </tr>
+                    <tr>
+                        <td class="attr-label">Modified</td>
+                        <td class="attr-value">{% block modified_date %}June 9, 2026{% endblock %}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Hotlists array and state
+    const allAvailableHotlists = [
+        "WOOPS: Needs answer",
+        "WOOPS: Panel decision made",
+        "WOOPS: Needs panel decision",
+        "WOOPS: Technical issue",
+        "WOOPS: Escalated to Engineering",
+        "WOOPS: Pending Security Verification",
+        "WOOPS: 24-7 Oncall Triage",
+        "WOOPS: High Priority VRP",
+        "WOOPS: Requires Executive Review",
+        "WOOPS: Candidate Assessment"
+    ];
+
+    let currentHotlists = {% block initial_hotlists %}["WOOPS: Needs answer"]{% endblock %};
+
+    function renderHotlistsBar() {
+        const container = document.getElementById('active-hotlists-container');
+        if (!container) return;
+        
+        const pillsHtml = currentHotlists.map(hotlist => `
+            <span class="hotlist-pill" style="background-color: #f1f3f4; color: #202124; border: 1px solid #dadce0; border-radius: 14px; padding: 3px 10px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; transition: background-color 0.1s;">
+                <i class="material-icons" style="font-size: 14px; color: #1a73e8;">label</i>
+                ${hotlist}
+                <i class="material-icons" onclick="removeHotlist('${hotlist.replace(/'/g, "\\'")}')" style="font-size: 14px; cursor: pointer; color: #5f6368; border-radius: 50%;" onmouseover="this.style.color='#c5221f'" onmouseout="this.style.color='#5f6368'" title="Remove hotlist">close</i>
+            </span>
+        `).join('');
+        
+        container.innerHTML = pillsHtml;
+    }
+
+    function removeHotlist(name) {
+        currentHotlists = currentHotlists.filter(h => h !== name);
+        renderHotlistsBar();
+    }
+
+    function toggleHotlistMenu(event) {
+        event.stopPropagation();
+        const menu = document.getElementById('hotlist-menu');
+        if (menu.style.display === 'none') {
+            menu.style.display = 'block';
+            renderHotlistOptions();
+            const searchInput = document.getElementById('hotlist-search');
+            searchInput.value = '';
+            setTimeout(() => searchInput.focus(), 50);
+        } else {
+            menu.style.display = 'none';
+        }
+    }
+
+    function renderHotlistOptions() {
+        const listEl = document.getElementById('hotlist-options-list');
+        const query = document.getElementById('hotlist-search').value.toLowerCase();
+        
+        const unadded = allAvailableHotlists.filter(h => !currentHotlists.includes(h));
+        const matches = unadded.filter(h => h.toLowerCase().includes(query));
+        
+        if (matches.length === 0) {
+            listEl.innerHTML = '<div style="padding: 12px; color: #5f6368; font-size: 13px; text-align: center;">No matching hotlists found</div>';
+            return;
+        }
+        
+        listEl.innerHTML = matches.map(hotlist => `
+            <div onclick="addHotlist('${hotlist.replace(/'/g, "\\'")}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f3f4; display: flex; align-items: center; gap: 8px; transition: background-color 0.1s;" onmouseover="this.style.backgroundColor='#f1f3f4'" onmouseout="this.style.backgroundColor='#fff'">
+                <i class="material-icons" style="font-size: 16px; color: #5f6368;">add_circle_outline</i>
+                <span style="font-size: 13px; color: #202124;">${hotlist}</span>
+            </div>
+        `).join('');
+    }
+
+    function addHotlist(name) {
+        if (!currentHotlists.includes(name)) {
+            currentHotlists.push(name);
+            renderHotlistsBar();
+        }
+        document.getElementById('hotlist-menu').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        renderHotlistsBar();
+        numberComments();
+    });
+
+    function numberComments() {
+        const cards = document.querySelectorAll('.description-card, .comments-section .comment-card:not(#comment-box-container)');
+        cards.forEach((card, idx) => {
+            const actionsEl = card.querySelector('.card-actions');
+            if (actionsEl) {
+                const existing = actionsEl.querySelector('.comment-num-badge');
+                if (existing) existing.remove();
+                
+                const badge = document.createElement('span');
+                badge.className = 'comment-num-badge';
+                badge.style.cssText = 'font-weight: 600; font-size: 13px; color: #5f6368; margin-right: 8px; font-family: Roboto, sans-serif;';
+                badge.textContent = `#${idx + 1}`;
+                actionsEl.insertBefore(badge, actionsEl.firstChild);
+            }
+        });
+    }
+
+    // Canned responses array (to be filled in later)
+    const cannedResponses = [
+        {
+            title: "Close - Won't Fix (Infeasible)",
+            content: "Status: Won't Fix (Infeasible).\n\nWe have reviewed this report and determined that the architectural efficiency and resource consumption concerns described are out of scope for our technical security VRP programs. Thank you for your submission."
+        },
+        {
+            title: "Close - Intended Behavior",
+            content: "Status: Won't Fix (Intended Behavior).\n\nThe system is operating as designed. The behavior described is an expected part of our multi-agent architecture and does not represent a security vulnerability."
+        },
+        {
+            title: "Close - Duplicate Report",
+            content: "Status: Duplicate.\n\nThank you for your report. We have verified that this issue has already been reported by another researcher and is being tracked in an existing ticket."
+        },
+        {
+            title: "Close - Out of Scope",
+            content: "Status: Won't Fix (Out of Scope).\n\nThis submission falls outside the defined scope of our current Vulnerability Reward Program. Please refer to our program guidelines for eligible bug categories."
+        },
+        {
+            title: "Request More Information",
+            content: "Thank you for your report. Could you please provide step-by-step reproduction steps and a proof-of-concept demonstrating how this issue affects data confidentiality or integrity?"
+        },
+        {
+            title: "Acknowledge & Investigate",
+            content: "We have received your report and our engineering team is currently investigating the root cause. We will provide an update once our triage is complete."
+        },
+        {
+            title: "Verified - Fix in Progress",
+            content: "Status: Accepted / In Progress.\n\nWe have successfully reproduced the vulnerability and our engineering team is actively working on a patch. We will notify you once the fix is deployed."
+        }
+    ];
+
+    function toggleCannedMenu(event) {
+        event.stopPropagation();
+        const menu = document.getElementById('canned-menu');
+        if (menu.style.display === 'none') {
+            menu.style.display = 'block';
+            renderCannedList(cannedResponses);
+            const searchInput = document.getElementById('canned-search');
+            searchInput.value = '';
+            setTimeout(() => searchInput.focus(), 50);
+        } else {
+            menu.style.display = 'none';
+        }
+    }
+
+    function renderCannedList(items) {
+        const listEl = document.getElementById('canned-list');
+        if (items.length === 0) {
+            listEl.innerHTML = '<div style="padding: 12px; color: #5f6368; font-size: 13px; text-align: center;">No matching responses found</div>';
+            return;
+        }
+        listEl.innerHTML = items.map(item => {
+            const origIdx = cannedResponses.indexOf(item);
+            const firstLine = item.content.split('\n')[0] || item.content;
+            const preview = firstLine.length > 55 ? firstLine.substring(0, 55) + '...' : firstLine;
+            return `
+                <div onclick="selectCannedResponse(${origIdx})" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f3f4; transition: background-color 0.1s;" onmouseover="this.style.backgroundColor='#f1f3f4'" onmouseout="this.style.backgroundColor='#fff'">
+                    <div style="font-weight: 600; font-size: 13px; color: #202124;">${item.title}</div>
+                    <div style="font-size: 12px; color: #5f6368; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${preview}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function filterCannedResponses() {
+        const query = document.getElementById('canned-search').value.toLowerCase();
+        const filtered = cannedResponses.filter(item => 
+            item.title.toLowerCase().includes(query) || 
+            item.content.toLowerCase().includes(query)
+        );
+        renderCannedList(filtered);
+    }
+
+    function selectCannedResponse(index) {
+        const item = cannedResponses[index];
+        if (item) {
+            const textarea = document.getElementById('comment-text');
+            textarea.value = item.content;
+            textarea.focus();
+        }
+        document.getElementById('canned-menu').style.display = 'none';
+    }
+
+    document.addEventListener('click', function(event) {
+        const cannedMenu = document.getElementById('canned-menu');
+        if (cannedMenu && cannedMenu.style.display !== 'none') {
+            if (!event.target.closest('#canned-menu') && !event.target.closest('button[onclick*="toggleCannedMenu"]')) {
+                cannedMenu.style.display = 'none';
+            }
+        }
+        const hotlistMenu = document.getElementById('hotlist-menu');
+        if (hotlistMenu && hotlistMenu.style.display !== 'none') {
+            if (!event.target.closest('#hotlist-menu') && !event.target.closest('button[onclick*="toggleHotlistMenu"]')) {
+                hotlistMenu.style.display = 'none';
+            }
+        }
+    });
+
+    function toggleCommentBox() {
+        const box = document.getElementById('comment-box-container');
+        if (box.style.display === 'none') {
+            box.style.display = 'block';
+            document.getElementById('comment-text').focus();
+            box.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            box.style.display = 'none';
+        }
+    }
+
+    async function submitComment(event, bugId) {
+        event.preventDefault();
+        const text = document.getElementById('comment-text').value;
+        if (!text.trim()) return;
+
+        try {
+            const response = await fetch(`/${bugId}/comment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: text })
+            });
+            if (response.ok) {
+                window.location.reload();
+            }
+        } catch (e) {
+            console.error('Error posting comment:', e);
+        }
+    }
+    </script>
+</body>
+</html>
+
+
+
+
