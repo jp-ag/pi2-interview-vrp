@@ -10,26 +10,6 @@ comments_db = {
 
 # Automated responses configured per bug ID.
 automated_responses = {
-    "1": {
-        "author": "SecDiscovery (external-reports@secdiscovery.example.com)",
-        "avatar": "SD",
-        "content": (
-            "Thanks for checking! I verified that the XSS payload executes"
-            " when the 'name' parameter contains script tags."
-        ),
-        "enabled": True,
-        "is_internal": False,
-    },
-    "2": {
-        "author": "db-admin@google.com",
-        "avatar": "DB",
-        "content": (
-            "I checked the database logs and confirmed we see malformed syntax"
-            " errors during login attempts."
-        ),
-        "enabled": False,
-        "is_internal": True,
-    },
 }
 
 
