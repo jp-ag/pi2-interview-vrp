@@ -1,97 +1,230 @@
-{% extends "base.html" %}
-
-{% block component_path %}Security &gt; Open Source VRP &gt; DataSerializer{% endblock %}
-{% block bug_title %}Bug 1: DataSerializer: Integer Truncation in upb_Decode due to casting size_t to int32_t causing Out-of-Bounds Read and SEGV{% endblock %}
-{% block type_val %}Open Source VRP / Memory Corruption{% endblock %}
-{% block status_val %}Assigned{% endblock %}
-
-{% block reporter_name %}reporter@mail.com{% endblock %}
-{% block reporter_link %}reporter@mail.com{% endblock %}
-
-{% block decision_status %}
-<span style="background-color: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: 600;">Pending Evaluation</span>
-{% endblock %}
-
-{% block decision_content %}
-<div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: #451a03;">
-    <div>
-        <strong style="color: #78350f;">Risk Evaluation:</strong>
-        <p style="margin: 4px 0 0 0;">Integer truncation in <code>upb_Decode</code> causes Out-of-Bounds Read in Tier 0 (Flagship) project.</p>
-    </div>
-    <div>
-        <strong style="color: #78350f;">Triage Checklist:</strong>
-        <ul style="margin: 4px 0 0 16px; padding-left: 0; list-style-type: none; display: flex; flex-direction: column; gap: 4px;">
-            <li><label><input type="checkbox" checked disabled> Valid memory corruption PoC</label></li>
-            <li><label><input type="checkbox" disabled> Exact OSS-Fuzz repro format</label></li>
-            <li><label><input type="checkbox" disabled> Merged patch provided</label></li>
-            <li><label><input type="checkbox" disabled> Tier 0 project rules evaluated</label></li>
-        </ul>
-    </div>
-    <div style="background-color: #fef3c7; padding: 8px; border-radius: 4px; border-left: 3px solid #d97706;">
-        <strong style="color: #78350f;">Action Required:</strong>
-        <span style="color: #451a03; display: block; margin-top: 2px;">Evaluate against Open Source VRP criteria for Tier 0 projects. Provide appropriate response and triage decision.</span>
-    </div>
-</div>
-{% endblock %}
-
-{% block description_content %}
-<div style="margin-bottom: 16px; padding: 12px; background-color: #f8f9fa; border-radius: 6px; border: 1px solid #dadce0;">
-    <strong>Program:</strong> Open Source VRP<br>
-    <strong>URL:</strong> <a href="https://github.com/example/dataserializer">https://github.com/example/dataserializer</a><br>
-    <strong>Vulnerability type:</strong> Memory Corruption
-</div>
-
-<h3>Details</h3>
-<h4>Summary</h4>
-<p>An Integer Truncation/Overflow vulnerability (CWE-190) exists in the DataSerializer PHP extension (specifically within the underlying <code>upb</code> parsing library). When processing exceptionally large binary descriptor sets, the library fails to safely validate input lengths, leading to a critical Out-of-Bounds Read and a fatal process crash (Segmentation Fault).</p>
-
-<h4>Technical Details</h4>
-<p>When a large payload (e.g., 2GB or 2,147,483,648 bytes) is passed to <code>Example\DataSerializer\DescriptorPool::internalAddGeneratedFile()</code>, the execution flow moves deep into the native C layer:</p>
-<ol>
-    <li><code>zim_DescriptorPool_internalAddGeneratedFile</code> calls <code>add_descriptor_set</code>.</li>
-    <li>It invokes <code>example_dataserializer_FileDescriptorSet_parse</code> which routes down to <code>upb_Decode</code>.</li>
-    <li>Inside <code>_upb_Decoder_DecodeMessage</code> and its inlined fallback checks (<code>_upb_Decoder_IsDoneFallback</code>), the size parameter (originally a 64-bit <code>size_t</code>) is implicitly or explicitly cast/truncated into a signed 32-bit integer (<code>int32_t</code>).</li>
-    <li>This truncation causes the massive positive boundary size to wrap around and be interpreted as a negative integer (<code>-2147483648</code>).</li>
-    <li>Subsequent pointer arithmetic corrupted by this negative length value results in an invalid memory read access within <code>__memcpy_aarch64_simd</code>, triggering an immediate <code>SIGSEGV</code>.</li>
-</ol>
-
-<h4>Proof of Concept (PoC)</h4>
-<p>Run the following standard PHP command in an environment compiled with AddressSanitizer (ASAN):</p>
-<pre><code>php -d extension=dataserializer.so -r '$pool = Example\DataSerializer\DescriptorPool::getGeneratedPool(); $pool-&gt;internalAddGeneratedFile(str_repeat("A", 2147483648));'</code></pre>
-
-<h3>Attack scenario</h3>
-<h4>Exploitation Vector &amp; Attacker Capabilities</h4>
-<p>An attacker who can control or influence the binary descriptor data supplied to an application utilizing the DataSerializer PHP extension can exploit this vulnerability. This is especially critical in scenarios where applications accept untrusted or user-supplied protocol buffer configurations, schema uploads, or dynamic descriptor streams without strict upfront validation of the payload size at the application layer.</p>
-
-<h4>Core Security Impact</h4>
-<ul>
-    <li><strong>Remote Denial of Service (DoS):</strong> Because the error triggers a hard Segmentation Fault (<code>SIGSEGV</code>) directly at the native C library layer rather than throwing a catchable or loggable PHP exception, it completely terminates the entire executing process instantly.</li>
-    <li><strong>Process Pool Exhaustion:</strong> In production web environments (such as PHP-FPM or Apache worker setups), repeatedly sending this payload will continuously crash and kill backend worker processes. This forces the server to constantly respawn processes, leading to resource exhaustion (CPU/Memory spikes) and rendering the web application or microservice completely unavailable to legitimate users.</li>
-    <li><strong>System Instability:</strong> The reliability of the crash makes it highly trivial for an attacker to maintain a persistent state of Denial of Service, severely breaking service-level agreements (SLAs) and core system availability.</li>
-</ul>
-{% endblock %}
-
-{% block static_comments %}
-<!-- Comment 2: Automated Receipt -->
-<div class="bug-card comment-card">
-    <div class="card-header">
-        <div class="reporter-info">
-            <div class="avatar" style="background-color: #eaf2ff; color: #0969da;">VB</div>
-            <div class="reporter-details">
-                <span class="reporter-name"><strong>vrp-bot@example.com</strong></span>
-                <span class="report-date">commented on July 3, 2026 10:55 UTC</span>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Issue Tracker - Bug 1</title>
+    <link rel="stylesheet" href="buganizer.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <!-- Top Header -->
+    <div class="tracker-header">
+        <div class="header-left">
+            <button class="menu-btn"><i class="material-icons">menu</i></button>
+            <div class="logo">
+                <span class="google-text">Google</span>
+                <span class="tracker-text">Issue Tracker</span>
             </div>
         </div>
-        <div class="card-actions"><i class="material-icons">reply</i><i class="material-icons">more_vert</i></div>
+        <div class="search-bar">
+            <i class="material-icons search-icon">search</i>
+            <input type="text" placeholder="Search issues, hotlists, bookmarks..." disabled>
+        </div>
+        <div class="header-right">
+            <i class="material-icons">help_outline</i>
+            <i class="material-icons">notifications_none</i>
+            <div class="user-avatar">P</div>
+        </div>
     </div>
-    <div class="card-body description-content">
-        <em>NOTE: This is an automatically generated email</em><br><br>
-        Hi! Many thanks for sharing your report.<br><br>
-        This email confirms we've received your message. We'll investigate the issue you've reported and get back to you once we have an update. Our automated asset triage has verified that the reported repository <code>https://github.com/example/dataserializer</code> is officially classified as a <strong>Tier 0 (Flagship) repository</strong> under our Open Source VRP scope.<br><br>
-        In the meantime, you might want to take a look at the <a href="https://vrp.example.com/faq">list of frequently asked questions about [Company] VRP</a>.<br><br>
-        Hey! Our automation saw that your report contained a link to github.com! Did you know that you can get rewarded for patching vulnerabilities? See our <a href="https://vrp.example.com/patch-rewards">Patch Rewards Program</a> for more information!<br><br>
-        Cheers,<br>
-        [Company] Security Bot
+
+    <!-- Action Toolbar -->
+    <div class="action-toolbar">
+        <button class="action-btn primary"><i class="material-icons">edit</i> Edit</button>
+        <button class="action-btn" onclick="toggleCommentBox()"><i class="material-icons">comment</i> Comment</button>
+        <button class="action-btn"><i class="material-icons">person_add</i> Assign to me</button>
+        <button class="action-btn"><i class="material-icons">star_border</i></button>
+        <button class="action-btn"><i class="material-icons">refresh</i></button>
+        <div class="toolbar-separator"></div>
+        <span class="component-path">Component: <strong>Security &gt; Open Source VRP &gt; DataSerializer</strong></span>
     </div>
-</div>
-{% endblock %}
+    
+    <!-- Main Container -->
+    <div class="tracker-container">
+        <!-- Left Content Area -->
+        <div class="main-content">
+            <!-- Hotlists Bar -->
+            <div class="hotlists-bar" style="margin-bottom: 16px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; background-color: #fff; padding: 8px 12px; border: 1px solid #dadce0; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <div style="display: flex; align-items: center; gap: 4px; color: #5f6368; font-size: 13px; font-weight: 600; margin-right: 4px;">
+                    <i class="material-icons" style="font-size: 18px; color: #1a73e8;">bookmarks</i>
+                    <span>Hotlists:</span>
+                </div>
+                <div id="active-hotlists-container" style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <span class="hotlist-pill" style="background-color: #f1f3f4; color: #202124; border: 1px solid #dadce0; border-radius: 14px; padding: 3px 10px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="material-icons" style="font-size: 14px; color: #1a73e8;">label</i>
+                        WOOPS: Needs answer
+                        <i class="material-icons" onclick="this.parentElement.remove()" style="font-size: 14px; cursor: pointer; color: #5f6368;" title="Remove hotlist">close</i>
+                    </span>
+                </div>
+            </div>
+
+            <div class="bug-header-card">
+                <div class="bug-id-row">
+                    <span class="bug-id-label">Issue 1</span>
+                    <span class="bug-type-badge"><i class="material-icons">bug_report</i> VULNERABILITY</span>
+                </div>
+                <h1 class="bug-title">Bug 1: DataSerializer: Integer Truncation in upb_Decode due to casting size_t to int32_t causing Out-of-Bounds Read and SEGV</h1>
+            </div>
+
+            <!-- Description Card -->
+            <div class="bug-card description-card">
+                <div class="card-header">
+                    <div class="reporter-info">
+                        <div class="avatar">SD</div>
+                        <div class="reporter-details">
+                            <span class="reporter-name"><strong>reporter@mail.com</strong></span>
+                            <span class="report-date">reported on June 9, 2026</span>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <span class="comment-num-badge" style="font-weight: 600; font-size: 13px; color: #5f6368; margin-right: 8px;">#1</span>
+                        <i class="material-icons">reply</i>
+                        <i class="material-icons">more_vert</i>
+                    </div>
+                </div>
+                <div class="card-body description-content">
+                    <div style="margin-bottom: 16px; padding: 12px; background-color: #f8f9fa; border-radius: 6px; border: 1px solid #dadce0;">
+                        <strong>Program:</strong> Open Source VRP<br>
+                        <strong>URL:</strong> <a href="https://github.com/example/dataserializer">https://github.com/example/dataserializer</a><br>
+                        <strong>Vulnerability type:</strong> Memory Corruption
+                    </div>
+
+                    <h3>Details</h3>
+                    <h4>Summary</h4>
+                    <p>An Integer Truncation/Overflow vulnerability (CWE-190) exists in the DataSerializer PHP extension (specifically within the underlying <code>upb</code> parsing library). When processing exceptionally large binary descriptor sets, the library fails to safely validate input lengths, leading to a critical Out-of-Bounds Read and a fatal process crash (Segmentation Fault).</p>
+
+                    <h4>Technical Details</h4>
+                    <p>When a large payload (e.g., 2GB or 2,147,483,648 bytes) is passed to <code>Example\DataSerializer\DescriptorPool::internalAddGeneratedFile()</code>, the execution flow moves deep into the native C layer:</p>
+                    <ol>
+                        <li><code>zim_DescriptorPool_internalAddGeneratedFile</code> calls <code>add_descriptor_set</code>.</li>
+                        <li>It invokes <code>example_dataserializer_FileDescriptorSet_parse</code> which routes down to <code>upb_Decode</code>.</li>
+                        <li>Inside <code>_upb_Decoder_DecodeMessage</code> and its inlined fallback checks (<code>_upb_Decoder_IsDoneFallback</code>), the size parameter (originally a 64-bit <code>size_t</code>) is implicitly or explicitly cast/truncated into a signed 32-bit integer (<code>int32_t</code>).</li>
+                        <li>This truncation causes the massive positive boundary size to wrap around and be interpreted as a negative integer (<code>-2147483648</code>).</li>
+                        <li>Subsequent pointer arithmetic corrupted by this negative length value results in an invalid memory read access within <code>__memcpy_aarch64_simd</code>, triggering an immediate <code>SIGSEGV</code>.</li>
+                    </ol>
+
+                    <h4>Proof of Concept (PoC)</h4>
+                    <p>Run the following standard PHP command in an environment compiled with AddressSanitizer (ASAN):</p>
+                    <pre><code>php -d extension=dataserializer.so -r '$pool = Example\DataSerializer\DescriptorPool::getGeneratedPool();$pool-&gt;internalAddGeneratedFile(str_repeat("A", 2147483648));'</code></pre>
+
+                    <h3>Attack scenario</h3>
+                    <h4>Exploitation Vector &amp; Attacker Capabilities</h4>
+                    <p>An attacker who can control or influence the binary descriptor data supplied to an application utilizing the DataSerializer PHP extension can exploit this vulnerability. This is especially critical in scenarios where applications accept untrusted or user-supplied protocol buffer configurations, schema uploads, or dynamic descriptor streams without strict upfront validation of the payload size at the application layer.</p>
+
+                    <h4>Core Security Impact</h4>
+                    <ul>
+                        <li><strong>Remote Denial of Service (DoS):</strong> Because the error triggers a hard Segmentation Fault (<code>SIGSEGV</code>) directly at the native C library layer rather than throwing a catchable or loggable PHP exception, it completely terminates the entire executing process instantly.</li>
+                        <li><strong>Process Pool Exhaustion:</strong> In production web environments (such as PHP-FPM or Apache worker setups), repeatedly sending this payload will continuously crash and kill backend worker processes. This forces the server to constantly respawn processes, leading to resource exhaustion (CPU/Memory spikes) and rendering the web application or microservice completely unavailable to legitimate users.</li>
+                        <li><strong>System Instability:</strong> The reliability of the crash makes it highly trivial for an attacker to maintain a persistent state of Denial of Service, severely breaking service-level agreements (SLAs) and core system availability.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="comments-section">
+                <!-- Comment 2: Automated Receipt -->
+                <div class="bug-card comment-card">
+                    <div class="card-header">
+                        <div class="reporter-info">
+                            <div class="avatar" style="background-color: #eaf2ff; color: #0969da;">VB</div>
+                            <div class="reporter-details">
+                                <span class="reporter-name"><strong>vrp-bot@example.com</strong></span>
+                                <span class="report-date">commented on July 3, 2026 10:55 UTC</span>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <span class="comment-num-badge" style="font-weight: 600; font-size: 13px; color: #5f6368; margin-right: 8px;">#2</span>
+                            <i class="material-icons">reply</i>
+                            <i class="material-icons">more_vert</i>
+                        </div>
+                    </div>
+                    <div class="card-body description-content">
+                        <em>NOTE: This is an automatically generated email</em><br><br>
+                        Hi! Many thanks for sharing your report.<br><br>
+                        This email confirms we've received your message. We'll investigate the issue you've reported and get back to you once we have an update. Our automated asset triage has verified that the reported repository <code>https://github.com/example/dataserializer</code> is officially classified as a <strong>Tier 0 (Flagship) repository</strong> under our Open Source VRP scope.<br><br>
+                        In the meantime, you might want to take a look at the <a href="https://vrp.example.com/faq">list of frequently asked questions about [Company] VRP</a>.<br><br>
+                        Hey! Our automation saw that your report contained a link to github.com! Did you know that you can get rewarded for patching vulnerabilities? See our <a href="https://vrp.example.com/patch-rewards">Patch Rewards Program</a> for more information!<br><br>
+                        Cheers,<br>
+                        [Company] Security Bot
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Sidebar -->
+        <div class="sidebar">
+            <!-- SPUR Decision Board Panel -->
+            <div class="sidebar-section" style="background-color: #fefcf0; border: 1px solid #fde68a; border-left: 4px solid #d97706; border-radius: 6px; margin-bottom: 20px; padding: 0; overflow: hidden;">
+                <div style="background-color: #fef3c7; padding: 10px 12px; border-bottom: 1px solid #fde68a; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="material-icons" style="color: #d97706; font-size: 18px;">assignment_turned_in</i>
+                        <span style="font-weight: 600; font-size: 13px; color: #78350f;">SPUR Decision Board</span>
+                    </div>
+                    <div>
+                        <span style="background-color: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: 600;">Pending Evaluation</span>
+                    </div>
+                </div>
+                <div style="padding: 12px; font-size: 12px; color: #451a03; line-height: 1.5;">
+                    <div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: #451a03;">
+                        <div>
+                            <strong style="color: #78350f;">Risk Evaluation:</strong>
+                            <p style="margin: 4px 0 0 0;">Integer truncation in <code>upb_Decode</code> causes Out-of-Bounds Read in Tier 0 (Flagship) project.</p>
+                        </div>
+                        <div>
+                            <strong style="color: #78350f;">Triage Checklist:</strong>
+                            <ul style="margin: 4px 0 0 16px; padding-left: 0; list-style-type: none; display: flex; flex-direction: column; gap: 4px;">
+                                <li><label><input type="checkbox" checked disabled> Valid memory corruption PoC</label></li>
+                                <li><label><input type="checkbox" disabled> Exact OSS-Fuzz repro format</label></li>
+                                <li><label><input type="checkbox" disabled> Merged patch provided</label></li>
+                                <li><label><input type="checkbox" disabled> Tier 0 project rules evaluated</label></li>
+                            </ul>
+                        </div>
+                        <div style="background-color: #fef3c7; padding: 8px; border-radius: 4px; border-left: 3px solid #d97706;">
+                            <strong style="color: #78350f;">Action Required:</strong>
+                            <span style="color: #451a03; display: block; margin-top: 2px;">Evaluate against Open Source VRP criteria for Tier 0 projects. Provide appropriate response and triage decision.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attributes Section -->
+            <div class="sidebar-section">
+                <div class="section-title">Attributes</div>
+                <table class="attributes-table">
+                    <tr>
+                        <td class="attr-label">Status</td>
+                        <td class="attr-value"><div class="select-mock status-active">Assigned <i class="material-icons">arrow_drop_down</i></div></td>
+                    </tr>
+                    <tr>
+                        <td class="attr-label">Priority</td>
+                        <td class="attr-value"><div class="select-mock">P1 <i class="material-icons">arrow_drop_down</i></div></td>
+                    </tr>
+                    <tr>
+                        <td class="attr-label">Severity</td>
+                        <td class="attr-value"><div class="select-mock">S1 <i class="material-icons">arrow_drop_down</i></div></td>
+                    </tr>
+                    <tr>
+                        <td class="attr-label">Type</td>
+                        <td class="attr-value">Open Source VRP / Memory Corruption</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- People Section -->
+            <div class="sidebar-section">
+                <div class="section-title">People</div>
+                <table class="attributes-table">
+                    <tr>
+                        <td class="attr-label">Assignee</td>
+                        <td class="attr-value"><div class="select-mock assignee-unassigned">Unassigned <i class="material-icons">person_outline</i></div></td>
+                    </tr>
+                    <tr>
+                        <td class="attr-label">Reporter</td>
+                        <td class="attr-value"><span class="user-link">reporter@mail.com</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
